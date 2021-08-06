@@ -126,8 +126,11 @@ async def test(ctx,  *, message: str):  # оздаем асинхронную ф
 # if not os.path.exists(path):  # create directory if it not exists
 #     os.makedirs(path)
 
-vk_session = vk_api.VkApi(LOGIN, VK_TOKEN)
+# vk_session = vk_api.VkApi(token=VK_TOKEN, app_id=7920699)
+vk_session = vk_api.VkApi(LOGIN, PASSWORD)
 vk_session.auth()
+# vk_session.get_api()
+# print(vk_session.method('users.get'))
 vk_audio = VkAudio(vk_session)
 # vk = vk_session.get_api()
 

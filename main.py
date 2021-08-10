@@ -1,35 +1,41 @@
 import os
 import traceback
+import queue
+import asyncio
 import discord
 from discord.ext import commands
-import requests
+from discord.ext import tasks
+# import requests
 import vk_api
 from vk_api.audio import VkAudio
 
-VERSION = 'Early access, alpha 0.1.0'
 
-bot = commands.Bot(command_prefix='.', description='Relatively simple music bot')
 TOKEN = os.getenv('TOKEN')
-
+COMMAND_PREFIX = '.'
+VERSION = 'Early access, alpha 0.2.0'
 REQUEST_STATUS_CODE = 200
-# name_dir = 'music_vk'
-# name_song = 'song.mp3'
-# path = r'G:\Projects\BotPy\source\\' + name_dir
 LOGIN = os.getenv('LOGIN')  # vk login
 PASSWORD = os.getenv('PASSWORD')  # vk password
-VK_TOKEN = os.getenv('VK_TOKEN')
-# my_id = 'my_id'  # vk id
+# VK_TOKEN = os.getenv('VK_TOKEN')
+
+
+bot = commands.Bot(command_prefix='.', description=f'Discord bot ({VERSION})')
 
 
 class Music(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # self.bot_join = False
+        self.music_queue = queue.Queue()
+        self.is_playing = False
+        self.queue_checker.start()
+
+    def set_is_playing(self, condition: bool):
+        self.is_playing = condition
 
     @commands.command()
     async def join(self, ctx):
-        """join to current client voice channel"""
+        """Join to the current client voice channel"""
         if ctx.voice_client:
             return True
         if ctx.author.voice:
@@ -43,7 +49,7 @@ class Music(commands.Cog):
 
     @commands.command()
     async def leave(self, ctx):
-        """leave from current voice channel"""
+        """Leave from the current voice channel"""
         if ctx.voice_client:
             print(f'{bot.user.name} leave from {ctx.author.voice.channel}')
             await self.stop(ctx)  # stop playing song
@@ -53,20 +59,27 @@ class Music(commands.Cog):
             print('Voice channel is not defined')
             return False
 
+    @tasks.loop(seconds=2)
+    async def queue_checker(self):
+        if not self.music_queue.empty() and not self.is_playing:
+            tmp = self.music_queue.get()
+            await self.play_song(tmp[0], tmp[1])
+
+    # region play
     @commands.command()
-    async def play(self, ctx,  *, query):
-        if not await self.join(ctx):
+    async def play(self, ctx, *, query=None):
+        """Searches for a song and put to the queue the first match"""
+        if query is None or not await self.join(ctx):
+            print('Unnecessary/empty call of play')
             return
-        # os.chdir(path)
+        self.music_queue.put([ctx, query])
+        print(f'{query} adds to music queue')
+
+    async def play_song(self, ctx, query):
+        self.set_is_playing(True)
         try:
             song = vk_audio.search(query, 1, 0)  # search query in global vk audio database
-
-            # ref = requests.get(song.__next__().get('url'))  # get url of audio
-            # if ref.status_code == REQUEST_STATUS_CODE:
-            #     with open(name_song, 'wb') as output_file:
-            #         output_file.write(ref.content)
-            # print(ref)
-            ctx.voice_client.play(discord.FFmpegPCMAudio(song.__next__().get('url')))
+            ctx.voice_client.play(discord.FFmpegPCMAudio(song.__next__().get('url')), after=lambda e: print('Player error: %s' % e) if e else self.set_is_playing(False))
             await ctx.send(f'Now playing: {query}')
         except StopIteration:
             print(traceback.format_exc())
@@ -77,24 +90,34 @@ class Music(commands.Cog):
         except discord.errors.ClientException:
             print(traceback.format_exc())
             await ctx.send('Song already playing, type ".stop" and try again')
-        # song_there = os.path.isfile('song.mp3')
-        # source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path + os.sep + 'song.mp3'))
-        # ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else self.leave(ctx))
+    # endregion play
 
     @commands.command()
     async def pause(self, ctx):
+        """Pauses a song"""
         if ctx.voice_client.is_playing():
             ctx.voice_client.pause()
 
     @commands.command()
     async def resume(self, ctx):
+        """Resumes paused song"""
         if ctx.voice_client.is_paused():
             ctx.voice_client.resume()
 
     @commands.command()
     async def stop(self, ctx):
+        """Stops a song"""
         if ctx.voice_client.is_playing() or ctx.voice_client.is_paused():
+            self.music_queue.queue.clear()
             ctx.voice_client.stop()
+
+    @commands.command()
+    async def skip(self, ctx):
+        """Skips a song"""
+        if ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+            # if not self.music_queue.empty():
+            #     await self.play_song(ctx, self.music_queue.get())
 
 
 @bot.event
@@ -109,22 +132,39 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
+    # if message.content.startswith(COMMAND_PREFIX + ''):
+    #     await message.delete()
     print(f'{message.author}: {message.content}')
     await bot.process_commands(message)
 
 
 @bot.command()
 async def version(ctx):
+    """Shows the current version of the bot"""
     await ctx.send(f'Version: {VERSION}')
+
+
+@bot.command()
+async def github(ctx):
+    """gives a link to the github page"""
+    url = 'https://github.com/dsawfer/Discord-Bot'
+    await ctx.send(url)
+
+
+# @bot.command()
+# async def prefix(ctx, message: str):
+#     """change prefix"""
+#     global COMMAND_PREFIX
+#     if message is not None:
+#         COMMAND_PREFIX = message
+#     await ctx.send(f'Current prefix: {COMMAND_PREFIX}')
 
 
 @bot.command()  # разрешаем передавать агрументы (pass_context=True)
 async def test(ctx,  *, message: str):  # оздаем асинхронную фунцию бота
+    """Test"""
     await ctx.send(message)  # отправляем обратно аргумент
 
-
-# if not os.path.exists(path):  # create directory if it not exists
-#     os.makedirs(path)
 
 # vk_session = vk_api.VkApi(token=VK_TOKEN, app_id=7920699)
 vk_session = vk_api.VkApi(LOGIN, PASSWORD)

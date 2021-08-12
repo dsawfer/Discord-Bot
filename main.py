@@ -15,7 +15,6 @@ TOKEN = os.getenv('TOKEN')
 VERSION = 'beta 0.5.0'
 LOGIN = os.getenv('LOGIN')  # vk login
 PASSWORD = os.getenv('PASSWORD')  # vk password
-# VK_TOKEN = os.getenv('VK_TOKEN')
 
 
 bot = commands.Bot(command_prefix='.', description=f'Discord bot ({VERSION})')
@@ -66,7 +65,8 @@ class Music(commands.Cog):
 
     @commands.command()
     async def play(self, ctx, *, query: str = None):
-        """Searches for a song and put to the queue the first match"""
+        """Searches for a song (if user send title and artist) and put to the queue the first match or
+        scan playlist (if user send playlist link) and put all the songs to the queue"""
         if query is None or not await self.join(ctx):
             print('Unnecessary/empty call of play')
             return
@@ -77,6 +77,7 @@ class Music(commands.Cog):
                 found = m.group(0)
                 found = found[len('audio_playlist'):]
                 url_template += found
+                print(f'playlist link: {url_template}')
 
                 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
                 request = requests.get(url_template, headers=headers)
@@ -90,15 +91,17 @@ class Music(commands.Cog):
                     print('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
 
                 title = soup.find_all('h1', class_='AudioPlaylistSnippet__title--main')[0].text
+                print('{} playlist adds to music queue'.format(title))
                 await ctx.send('{} playlist adds to music queue'.format(title))
             except AttributeError:
-                await ctx.send('Кидай нормальные ссылки, урод')
+                print(traceback.format_exc())
+                await ctx.send('Incorrect link, try again')
         else:
             try:
                 song = vk_audio.search(query, 1, 0).__next__()  # search query in global vk audio database
                 self.music_queue.put([ctx, song.get('url'), song.get('artist'), song.get('title')])
-                ctx.send('{} adds to music queue'.format(song.get('title')))
                 print('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
+                await ctx.send('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
             except StopIteration:
                 print(traceback.format_exc())
                 await ctx.send('Cannot find the song, please try again (play)')
@@ -143,8 +146,6 @@ class Music(commands.Cog):
         """Skips a song"""
         if ctx.voice_client.is_playing():
             ctx.voice_client.stop()
-            # if not self.music_queue.empty():
-            #     await self.play_song(ctx, self.music_queue.get())
 
 
 @bot.event
@@ -159,8 +160,6 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
-    # if message.content.startswith(COMMAND_PREFIX + ''):
-    #     await message.delete()
     print(f'{message.author}: {message.content}')
     await bot.process_commands(message)
 
@@ -178,28 +177,9 @@ async def github(ctx):
     await ctx.send(url)
 
 
-# @bot.command()
-# async def prefix(ctx, message: str):
-#     """change prefix"""
-#     global COMMAND_PREFIX
-#     if message is not None:
-#         COMMAND_PREFIX = message
-#     await ctx.send(f'Current prefix: {COMMAND_PREFIX}')
-
-
-@bot.command()  # разрешаем передавать агрументы (pass_context=True)
-async def test(ctx,  *, message: str):  # оздаем асинхронную фунцию бота
-    """Test"""
-    await ctx.send(message)  # отправляем обратно аргумент
-
-
-# vk_session = vk_api.VkApi(token=VK_TOKEN, app_id=7920699)
 vk_session = vk_api.VkApi(LOGIN, PASSWORD)
 vk_session.auth()
-# vk_session.get_api()
-# print(vk_session.method('users.get'))
 vk_audio = VkAudio(vk_session)
-# vk = vk_session.get_api()
 
 bot.add_cog(Music(bot))
 bot.run(TOKEN)

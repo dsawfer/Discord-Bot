@@ -1,19 +1,18 @@
 import os
 import traceback
 import queue
-import asyncio
+import re
+from bs4 import BeautifulSoup
+import requests
 import discord
 from discord.ext import commands
 from discord.ext import tasks
-# import requests
 import vk_api
 from vk_api.audio import VkAudio
 
 
 TOKEN = os.getenv('TOKEN')
-COMMAND_PREFIX = '.'
-VERSION = 'Early access, alpha 0.2.0'
-REQUEST_STATUS_CODE = 200
+VERSION = 'beta 0.5.0'
 LOGIN = os.getenv('LOGIN')  # vk login
 PASSWORD = os.getenv('PASSWORD')  # vk password
 # VK_TOKEN = os.getenv('VK_TOKEN')
@@ -63,34 +62,62 @@ class Music(commands.Cog):
     async def queue_checker(self):
         if not self.music_queue.empty() and not self.is_playing:
             tmp = self.music_queue.get()
-            await self.play_song(tmp[0], tmp[1])
+            await self.play_song(tmp[0], tmp[1], tmp[2], tmp[3])
 
-    # region play
     @commands.command()
-    async def play(self, ctx, *, query=None):
+    async def play(self, ctx, *, query: str = None):
         """Searches for a song and put to the queue the first match"""
         if query is None or not await self.join(ctx):
             print('Unnecessary/empty call of play')
             return
-        self.music_queue.put([ctx, query])
-        print(f'{query} adds to music queue')
+        if query.startswith('https://vk.com/'):
+            try:
+                url_template = 'https://vk.com/music/album/'
+                m = re.search(r'audio_playlist-?[0-9]+_[0-9]+', query)
+                found = m.group(0)
+                found = found[len('audio_playlist'):]
+                url_template += found
 
-    async def play_song(self, ctx, query):
+                headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                request = requests.get(url_template, headers=headers)
+                soup = BeautifulSoup(request.content, "html.parser")
+                songs = soup.find_all('div', class_='audio_row')
+
+                for item in songs:
+                    owner_id, song_id = item.get('data-full-id').split('_')
+                    song = vk_audio.get_audio_by_id(owner_id, song_id)
+                    self.music_queue.put([ctx, song.get('url'), song.get('artist'), song.get('title')])
+                    print('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
+
+                title = soup.find_all('h1', class_='AudioPlaylistSnippet__title--main')[0].text
+                await ctx.send('{} playlist adds to music queue'.format(title))
+            except AttributeError:
+                await ctx.send('Кидай нормальные ссылки, урод')
+        else:
+            try:
+                song = vk_audio.search(query, 1, 0).__next__()  # search query in global vk audio database
+                self.music_queue.put([ctx, song.get('url'), song.get('artist'), song.get('title')])
+                ctx.send('{} adds to music queue'.format(song.get('title')))
+                print('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
+            except StopIteration:
+                print(traceback.format_exc())
+                await ctx.send('Cannot find the song, please try again (play)')
+
+    async def play_song(self, ctx, url, artist, title):
         self.set_is_playing(True)
         try:
-            song = vk_audio.search(query, 1, 0)  # search query in global vk audio database
-            ctx.voice_client.play(discord.FFmpegPCMAudio(song.__next__().get('url')), after=lambda e: print('Player error: %s' % e) if e else self.set_is_playing(False))
-            await ctx.send(f'Now playing: {query}')
+            # song = vk_audio.search(query, 1, 0)  # search query in global vk audio database
+            ctx.voice_client.play(discord.FFmpegPCMAudio(url), after=lambda e: print('Player error: %s' % e) if e else self.set_is_playing(False))
+            await ctx.send(f'Now playing: {artist} - {title}')
         except StopIteration:
             print(traceback.format_exc())
-            await ctx.send('Cannot find the song, please try again')
+            await ctx.send('Cannot find the song, please try again (play_song)')
         except OSError:
             print(traceback.format_exc())
             await ctx.send('Something goes wrong, try again (OSError)')
         except discord.errors.ClientException:
             print(traceback.format_exc())
             await ctx.send('Song already playing, type ".stop" and try again')
-    # endregion play
 
     @commands.command()
     async def pause(self, ctx):

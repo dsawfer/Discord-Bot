@@ -79,7 +79,7 @@ class Music(commands.Cog):
                 url_template += found
                 print(f'playlist link: {url_template}')
 
-                headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                headers = {'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/75.0.3738.0 Safari/537.36 CloudWatchSynthetics/arn:aws:synthetics:us-west-2:120743116205:canary:1dw_core_mngr_dshbrd'}
                 response = requests.get(url_template, headers=headers)
                 soup = BeautifulSoup(response.content, "html.parser")
                 songs = soup.find_all('div', class_='audio_row')

@@ -80,19 +80,21 @@ class Music(commands.Cog):
                 print(f'playlist link: {url_template}')
 
                 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-                request = requests.get(url_template, headers=headers)
-                soup = BeautifulSoup(request.content, "html.parser")
+                response = requests.get(url_template, headers=headers)
+                soup = BeautifulSoup(response.content, "html.parser")
                 songs = soup.find_all('div', class_='audio_row')
+
+                print(response.content)
 
                 for item in songs:
                     owner_id, song_id = item.get('data-full-id').split('_')
                     song = vk_audio.get_audio_by_id(owner_id, song_id)
                     self.music_queue.put([ctx, song.get('url'), song.get('artist'), song.get('title')])
-                    print('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
+                    print('"{} - {}" adds to music queue'.format(song.get('artist'), song.get('title')))
 
                 title = soup.find_all('h1', class_='AudioPlaylistSnippet__title--main')[0].text
-                print('{} playlist adds to music queue'.format(title))
-                await ctx.send('{} playlist adds to music queue'.format(title))
+                print('"{}" playlist adds to music queue'.format(title))
+                await ctx.send('"{}" playlist adds to music queue'.format(title))
             except AttributeError:
                 print(traceback.format_exc())
                 await ctx.send('Incorrect link, try again')
@@ -100,8 +102,8 @@ class Music(commands.Cog):
             try:
                 song = vk_audio.search(query, 1, 0).__next__()  # search query in global vk audio database
                 self.music_queue.put([ctx, song.get('url'), song.get('artist'), song.get('title')])
-                print('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
-                await ctx.send('{} - {} adds to music queue'.format(song.get('artist'), song.get('title')))
+                print('"{} - {}" adds to music queue'.format(song.get('artist'), song.get('title')))
+                await ctx.send('"{} - {}" adds to music queue'.format(song.get('artist'), song.get('title')))
             except StopIteration:
                 print(traceback.format_exc())
                 await ctx.send('Cannot find the song, please try again (play)')
@@ -172,7 +174,7 @@ async def version(ctx):
 
 @bot.command()
 async def github(ctx):
-    """gives a link to the github page"""
+    """Gives a link to the github page"""
     url = 'https://github.com/dsawfer/Discord-Bot'
     await ctx.send(url)
 

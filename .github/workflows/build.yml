@@ -8,6 +8,10 @@ on:
 
   workflow_dispatch:
 
+env:
+  BOT_NAME: discord-bot
+  DOCKER_TAG: ver-${{github.run_number}}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,10 +26,10 @@ jobs:
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
       - name: docker build
-        run: docker build . --file Dockerfile --tag discord-bot:test
+        run: docker build . --file Dockerfile --tag discord-bot:build
 
       - name: docker tag
-        run: docker tag discord-bot:test ${{secrets.DOCKER_USER}}/discord-bot:test
+        run: docker tag ${{ env.BOT_NAME }}:${{ env.DOCKER_TAG }} ${{secrets.DOCKER_USER}}/discord-bot:test
 
       - name: docker push
-        run: docker push ${{secrets.DOCKER_USER}}/discord-bot:test
+        run: docker push ${{secrets.DOCKER_USER}}/${{ env.BOT_NAME }}:${{ env.DOCKER_TAG }}

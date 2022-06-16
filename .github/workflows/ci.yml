@@ -91,17 +91,11 @@ jobs:
         with:
           name: deploy_status
 
-      - name: Set the statuses of Job 01 and Job 02 as output parameters
+      - name: Set Jobs Statuses as Output Parameters
         id: set_outputs
         run: |
           echo "::set-output name=build_status::$(<build_status/build_status.txt)"
           echo "::set-output name=deploy_status::$(<deploy_status/deploy_status.txt)"
-
-      - name: Show the values of the outputs
-        run: |
-          # using the syntax steps.<step_id>.outputs.<output_name> to access the output parameters
-          echo "status_job01 = ${{ steps.set_outputs.outputs.status_job01 }}"
-          echo "status_job02 = ${{ steps.set_outputs.outputs.status_job02 }}"
 
       - name: Send Notification
         uses: appleboy/telegram-action@master

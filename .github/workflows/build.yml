@@ -49,5 +49,5 @@ jobs:
           usedocker: true
           docker_build_args: |
             TOKEN_ARG
-          env:
-            TOKEN_ARG: ${{ secrets.BOT_TOKEN }}
+        env:
+          TOKEN_ARG: ${{ secrets.BOT_TOKEN }}

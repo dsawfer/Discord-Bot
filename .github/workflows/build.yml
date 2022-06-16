@@ -9,7 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  BOT_NAME: discord-bot:ver-${{github.run_number}}
+  BOT_NAME: discord-bot:ver-${{ github.run_number }}
+  HEROKU_APP_NAME: discord-bot-ekubo
 
 jobs:
   build:
@@ -17,18 +18,32 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: docker login
+      - name: Docker Login
         env:
-          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
         run: |
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
-      - name: docker build
+      - name: Docker Build
         run: docker build . --file Dockerfile --tag ${{ env.BOT_NAME }}
 
-      - name: docker tag
-        run: docker tag ${{ env.BOT_NAME }} ${{secrets.DOCKER_USER}}/${{ env.BOT_NAME }}
+      - name: Docker Tag
+        run: docker tag ${{ env.BOT_NAME }} ${{ secrets.DOCKER_USER }}/${{ env.BOT_NAME }}
 
-      - name: docker push
-        run: docker push ${{secrets.DOCKER_USER}}/${{ env.BOT_NAME }}
+      - name: Docker Push
+        run: docker push ${{ secrets.DOCKER_USER }}/${{ env.BOT_NAME }}
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to Heroku
+        uses: AkhileshNS/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ env.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          usedocker: true

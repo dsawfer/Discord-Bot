@@ -24,5 +24,8 @@ jobs:
       - name: docker build
         run: docker build . --file Dockerfile --tag discord-bot:test
 
+      - name: docker tag
+        run: docker tag discord-bot:test ${{secrets.DOCKER_USER}}/discord-bot:test
+
       - name: docker push
         run: docker push ${{secrets.DOCKER_USER}}/discord-bot:test

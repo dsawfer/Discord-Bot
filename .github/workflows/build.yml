@@ -6,21 +6,21 @@ on:
   pull_request:
     branches: [master]
 
-  jobs:
-    build:
-      runs-on: ubuntu-latest
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-      steps:
-        - uses: actions/checkout@v3
-        - name: docker login
-          env:
-            DOCKER_USER: ${{secrets.DOCKER_USER}}
-            DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}\
-          run: |
-            docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+    steps:
+      - uses: actions/checkout@v3
+      - name: docker login
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}\
+        run: |
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
-        - name: docker build
-          run: docker build . --file Dockerfile --tag bot:test
+      - name: docker build
+        run: docker build . --file Dockerfile --tag bot:test
 
-        - name: docker push
-          run: docker push ${{secrets.DOCKER_USER}}/discord-bot
+      - name: docker push
+        run: docker push ${{secrets.DOCKER_USER}}/discord-bot

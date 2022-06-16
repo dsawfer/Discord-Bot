@@ -22,7 +22,7 @@ jobs:
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
       - name: docker build
-        run: docker build . --file Dockerfile --tag bot:test
+        run: docker build . --file Dockerfile --tag discord-bot:test
 
       - name: docker push
         run: docker push ${{secrets.DOCKER_USER}}/discord-bot

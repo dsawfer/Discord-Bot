@@ -17,7 +17,7 @@ LOGIN = os.getenv('LOGIN')  # vk login
 PASSWORD = os.getenv('PASSWORD')  # vk password
 
 
-bot = commands.Bot(command_prefix='.', description=f'Discord bot ({VERSION})')
+bot = commands.Bot(command_prefix='!', description=f'Discord bot ({VERSION})')
 
 
 class Music(commands.Cog):
@@ -83,8 +83,6 @@ class Music(commands.Cog):
                 response = requests.get(url_template, headers=headers)
                 soup = BeautifulSoup(response.content, "html.parser")
                 songs = soup.find_all('div', class_='audio_row')
-
-                print(response.content)
 
                 for item in songs:
                     owner_id, song_id = item.get('data-full-id').split('_')

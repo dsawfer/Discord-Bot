@@ -26,7 +26,7 @@ jobs:
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
       - name: Docker Build
-        run: docker build . --file Dockerfile --tag ${{ env.BOT_NAME }}
+        run: docker build . --file Dockerfile --tag ${{ env.BOT_NAME }} --build-arg TOKEN_ARG=${{ secrets.BOT_TOKEN }}
 
       - name: Docker Tag
         run: docker tag ${{ env.BOT_NAME }} ${{ secrets.DOCKER_USER }}/${{ env.BOT_NAME }}
@@ -47,3 +47,7 @@ jobs:
           heroku_app_name: ${{ env.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           usedocker: true
+          docker_build_args: |
+            TOKEN_ARG
+          env:
+            TOKEN_ARG: ${{ secrets.BOT_TOKEN }}

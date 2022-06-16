@@ -34,6 +34,18 @@ jobs:
       - name: Docker Push
         run: docker push ${{ secrets.DOCKER_USER }}/${{ env.BOT_NAME }}
 
+      - name: Create Status File
+        if: ${{ always() }}
+        run: |
+          echo ${{ job.status }} > build_status.txt
+
+      - name: Upload Status File
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v1
+        with:
+          name: build_status
+          path: build_status.txt
+
   deploy:
     runs-on: ubuntu-latest
 
@@ -51,3 +63,58 @@ jobs:
             TOKEN_ARG
         env:
           TOKEN_ARG: ${{ secrets.BOT_TOKEN }}
+
+      - name: Create Status File
+        if: ${{ always() }}
+        run: |
+          echo ${{ job.status }} > deploy_status.txt
+
+      - name: Upload Status File
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v1
+        with:
+          name: deploy_status
+          path: deploy_status.txt
+
+  telegram:
+    needs: [build, deploy]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifact build_status
+        uses: actions/download-artifact@v1
+        with:
+          name: build_status
+
+      - name: Download Artifact deploy_status
+        uses: actions/download-artifact@v1
+        with:
+          name: deploy_status
+
+      - name: Set the statuses of Job 01 and Job 02 as output parameters
+        id: set_outputs
+        run: |
+          echo "::set-output name=build_status::$(<build_status/build_status.txt)"
+          echo "::set-output name=deploy_status::$(<deploy_status/deploy_status.txt)"
+
+      - name: Show the values of the outputs
+        run: |
+          # using the syntax steps.<step_id>.outputs.<output_name> to access the output parameters
+          echo "status_job01 = ${{ steps.set_outputs.outputs.status_job01 }}"
+          echo "status_job02 = ${{ steps.set_outputs.outputs.status_job02 }}"
+
+      - name: Send Notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ${{ github.actor }} created commit:
+
+            Commit message: ${{ github.event.commits[0].message }}
+            Repository: ${{ github.repository }}
+            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
+
+            GitHub Actions Statuses:
+            Job Build: ${{ steps.set_outputs.outputs.build_status }}
+            Job Deploy: ${{ steps.set_outputs.outputs.deploy_status }}

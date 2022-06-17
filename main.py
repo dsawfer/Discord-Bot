@@ -12,7 +12,7 @@ from vk_api.audio import VkAudio
 
 
 TOKEN = os.getenv('TOKEN')
-VERSION = 'beta 0.5.0'
+VERSION = 'beta 0.5.1'
 # LOGIN = os.getenv('LOGIN')  # vk login
 # PASSWORD = os.getenv('PASSWORD')  # vk password
 

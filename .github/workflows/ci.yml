@@ -45,6 +45,7 @@ jobs:
         with:
           name: build_status
           path: build_status.txt
+          retention-days: 1
 
   deploy:
     runs-on: ubuntu-latest
@@ -75,6 +76,7 @@ jobs:
         with:
           name: deploy_status
           path: deploy_status.txt
+          retention-days: 1
 
   telegram:
     needs: [build, deploy]

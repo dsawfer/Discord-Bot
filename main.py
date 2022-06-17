@@ -167,7 +167,7 @@ async def on_message(message):
 @bot.command()
 async def version(ctx):
     """Shows the current version of the bot"""
-    await ctx.send(f'Version: {VERSION}')
+    await ctx.send(f'Bot version: {VERSION}')
 
 
 @bot.command()
